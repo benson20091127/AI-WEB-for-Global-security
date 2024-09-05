@@ -1,0 +1,706 @@
+<html><head><base href="https://cybersecurity.taiwan.gov.tw/">
+<meta charset="UTF-8">
+<title>全球資安攻防戰 - 先進兵棋推演系統</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Noto Sans TC', sans-serif;
+        overflow: hidden;
+        display: flex;
+        background-color: #000033;
+        color: #e6f1ff;
+    }
+    #mainTitle {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #64ffda;
+        font-size: 24px;
+        text-align: center;
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+        z-index: 1001;
+    }
+    #map {
+        width: 50%;
+        height: calc(100% - 200px);
+        position: fixed;
+        top: 200px;
+        left: 25%;
+        z-index: -1;
+        background: radial-gradient(circle, #001f3f 0%, #000033 100%);
+    }
+    .side-panel {
+        width: 25%;
+        height: calc(100% - 200px);
+        background-color: rgba(0, 31, 63, 0.8);
+        padding: 10px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #0066cc;
+        box-shadow: 0 0 20px rgba(0, 102, 204, 0.5);
+        position: fixed;
+        top: 200px;
+    }
+    #attackers { left: 0; }
+    #defenders { right: 0; }
+    h1, h2 {
+        text-align: center;
+        color: #64ffda;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+    }
+    .country-list, #aiAdvisor {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #64ffda #0a192f;
+    }
+    .country-list::-webkit-scrollbar, #aiAdvisor::-webkit-scrollbar {
+        width: 6px;
+    }
+    .country-list::-webkit-scrollbar-track, #aiAdvisor::-webkit-scrollbar-track {
+        background: #0a192f;
+    }
+    .country-list::-webkit-scrollbar-thumb, #aiAdvisor::-webkit-scrollbar-thumb {
+        background-color: #64ffda;
+        border-radius: 20px;
+    }
+    .country-item {
+        margin-bottom: 8px;
+        padding: 5px;
+        border: 1px solid #0066cc;
+        border-radius: 5px;
+        background-color: rgba(0, 31, 63, 0.6);
+        transition: all 0.3s ease;
+        font-size: 0.9em;
+    }
+    .country-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(100, 255, 218, 0.2);
+    }
+    .attack { color: #ff6b6b; }
+    .defense { color: #4ecdc4; }
+    #overlay {
+        position: absolute;
+        bottom: 50px;
+        left: 25%;
+        width: 50%;
+        background-color: rgba(0, 31, 63, 0.8);
+        padding: 15px;
+        box-sizing: border-box;
+        border-top: 1px solid #0066cc;
+    }
+    #battleLog {
+        height: 120px;
+        overflow-y: auto;
+        background-color: rgba(10, 25, 47, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: #64ffda #0a192f;
+    }
+    #battleLog::-webkit-scrollbar {
+        width: 6px;
+    }
+    #battleLog::-webkit-scrollbar-track {
+        background: #0a192f;
+    }
+    #battleLog::-webkit-scrollbar-thumb {
+        background-color: #64ffda;
+        border-radius: 20px;
+    }
+    .log-entry {
+        margin-bottom: 8px;
+        padding: 5px;
+        border-left: 3px solid #64ffda;
+        animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    #stats {
+        display: flex;
+        justify-content: space-around;
+        background-color: rgba(10, 25, 47, 0.8);
+        padding: 15px;
+        border-radius: 5px;
+    }
+    .stat-item {
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #64ffda;
+    }
+    .country-label {
+        font-size: 12px;
+        font-weight: bold;
+        fill: #00ffff;
+        text-shadow: 0 0 3px #000033, 0 0 5px #000033;
+    }
+    #aiAdvisor {
+        background-color: rgba(10, 25, 47, 0.8);
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 10px;
+        max-height: 30%;
+        overflow-y: auto;
+        border: 1px solid #0066cc;
+    }
+    #aiAdvice {
+        font-style: italic;
+        color: #a8b2d1;
+        line-height: 1.6;
+    }
+    .glow {
+        filter: drop-shadow(0 0 5px #00ffff);
+    }
+    #controls {
+        position: absolute;
+        bottom: 40px;
+        left: 25%;
+        width: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(16, 33, 65, 0.8);
+        padding: 10px;
+        border-radius: 10px;
+        z-index: 1000;
+    }
+    #controls button {
+        margin: 0 5px;
+        padding: 5px 10px;
+        background-color: #64ffda;
+        color: #0a192f;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    #controls button:hover {
+        background-color: #4ecdc4;
+        transform: translateY(-2px);
+    }
+    #timeline {
+        width: 40%;
+        margin: 0 10px;
+    }
+    #tvNews {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        width: 25%;
+        height: 150px;
+        background-color: #000;
+        border: 5px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+        z-index: 1000;
+    }
+    #tvNewsContent {
+        padding: 10px;
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    #tvNewsHeadline {
+        font-size: 18px;
+        font-weight: bold;
+        color: #ff6b6b;
+        margin-bottom: 10px;
+    }
+    #tvNewsScroll {
+        height: 80px;
+        overflow-y: hidden;
+    }
+    #stockMarket {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        width: 25%;
+        height: 150px;
+        background-color: rgba(0, 31, 63, 0.8);
+        border: 2px solid #64ffda;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+        z-index: 1000;
+    }
+    #stockMarketContent {
+        padding: 10px;
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    #stockMarketHeadline {
+        font-size: 18px;
+        font-weight: bold;
+        color: #64ffda;
+        margin-bottom: 10px;
+    }
+    #stockMarketPrediction {
+        height: 50px;
+        overflow-y: hidden;
+    }
+</style>
+</head>
+<body>
+<h1 id="mainTitle">全球資安攻防戰 - 先進兵棋推演系統</h1>
+<div id="tvNews">
+    <div id="tvNewsContent">
+        <div id="tvNewsHeadline">突發新聞</div>
+        <div id="tvNewsScroll"></div>
+    </div>
+</div>
+<div id="stockMarket">
+    <div id="stockMarketContent">
+        <div id="stockMarketHeadline">股市預測</div>
+        <div id="stockMarketPrediction"></div>
+    </div>
+</div>
+<div id="attackers" class="side-panel">
+    <h1>攻擊方</h1>
+    <div id="attackersList" class="country-list"></div>
+</div>
+<div id="map"></div>
+<div id="defenders" class="side-panel">
+    <h1>防守方</h1>
+    <div id="defendersList" class="country-list"></div>
+    <div id="aiAdvisor">
+        <h2>AI軍師建議</h2>
+        <p id="aiAdvice"></p>
+    </div>
+</div>
+<div id="overlay">
+    <div id="battleLog"></div>
+    <div id="stats">
+        <div class="stat-item">
+            攻擊次數: <span id="attackCount" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+            防禦次數: <span id="defenseCount" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+            成功防禦率: <span id="successRate" class="stat-value">0%</span>
+        </div>
+    </div>
+</div>
+<div id="controls">
+    <button id="pauseBtn">暫停</button>
+    <button id="playBtn">播放</button>
+    <button id="speedUpBtn">加速</button>
+    <button id="slowDownBtn">減速</button>
+    <button id="replayBtn">重播</button>
+    <button id="zoomInBtn">放大</button>
+    <button id="zoomOutBtn">縮小</button>
+    <input type="range" id="timeline" min="0" max="100" value="100">
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+const width = window.innerWidth * 0.5;
+const height = window.innerHeight - 200;
+
+const svg = d3.select("#map")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+let currentZoom = 1;
+const zoomStep = 0.2;
+const maxZoom = 3;
+const minZoom = 0.5;
+
+const projection = d3.geoMercator()
+    .scale(150)
+    .translate([width / 2, height / 1.5]);
+
+const path = d3.geoPath().projection(projection);
+
+// 星空背景
+const starCount = 200;
+const stars = [];
+for (let i = 0; i < starCount; i++) {
+    stars.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 1.5
+    });
+}
+
+svg.selectAll(".star")
+   .data(stars)
+   .enter()
+   .append("circle")
+   .attr("class", "star")
+   .attr("cx", d => d.x)
+   .attr("cy", d => d.y)
+   .attr("r", d => d.r)
+   .attr("fill", "#ffffff")
+   .style("opacity", () => Math.random());
+
+// 星星閃爍動畫
+function twinkle() {
+    svg.selectAll(".star")
+       .transition()
+       .duration(() => Math.random() * 5000 + 1000)
+       .style("opacity", () => Math.random())
+       .on("end", twinkle);
+}
+
+twinkle();
+
+d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+    .then(function(world) {
+        svg.append("g")
+           .selectAll("path")
+           .data(topojson.feature(world, world.objects.countries).features)
+           .enter().append("path")
+           .attr("d", path)
+           .attr("fill", "#18344c")
+           .attr("stroke", "#64ffda")
+           .attr("stroke-width", 0.5)
+           .attr("class", "country");
+
+        // 國家邊界發光效果
+        svg.append("g")
+           .selectAll("path")
+           .data(topojson.feature(world, world.objects.countries).features)
+           .enter().append("path")
+           .attr("d", path)
+           .attr("fill", "none")
+           .attr("stroke", "#64ffda")
+           .attr("stroke-width", 1)
+           .attr("class", "country-border glow");
+    });
+
+const battleLog = document.getElementById('battleLog');
+const attackCountEl = document.getElementById('attackCount');
+const defenseCountEl = document.getElementById('defenseCount');
+const successRateEl = document.getElementById('successRate');
+const attackersList = document.getElementById('attackersList');
+const defendersList = document.getElementById('defendersList');
+const aiAdvice = document.getElementById('aiAdvice');
+const tvNewsScroll = document.getElementById('tvNewsScroll');
+const stockMarketPrediction = document.getElementById('stockMarketPrediction');
+
+let attackCount = 0;
+let defenseCount = 0;
+let successfulDefenses = 0;
+let simulationSpeed = 1;
+let isPaused = false;
+let battleHistory = [];
+let currentReplayIndex = 0;
+
+const attackers = {
+    "中國": { coords: [116.4, 39.9], attacks: 0 },
+    "俄羅斯": { coords: [37.6, 55.7], attacks: 0 },
+    "北韓": { coords: [125.7, 39.0], attacks: 0 },
+    "伊朗": { coords: [51.4, 35.7], attacks: 0 }
+};
+
+const defenders = {
+    "台灣": { coords: [121.5, 25.0], defenses: 0 },
+    "美國": { coords: [-77.0, 38.9], defenses: 0 },
+    "烏克蘭": { coords: [30.5, 50.4], defenses: 0 },
+    "韓國": { coords: [126.9, 37.5], defenses: 0 },
+    "日本": { coords: [139.7, 35.7], defenses: 0 }
+};
+
+const attackTypes = ["DDoS攻擊", "SQL注入", "跨站腳本攻擊", "社交工程", "勒索軟體", "零日漏洞攻擊", "中間人攻擊", "密碼暴力破解"];
+const defenseTypes = ["防火牆加強", "入侵檢測系統", "安全更新補丁", "員工培訓", "資料加密", "多因素認證", "網路隔離", "安全審計"];
+
+function updateCountryList(listElement, countries, type) {
+    listElement.innerHTML = '';
+    for (const [country, data] of Object.entries(countries)) {
+        const item = document.createElement('div');
+        item.className = 'country-item';
+        const count = type === 'attack' ? data.attacks : data.defenses;
+        const verb = type === 'attack' ? '攻擊' : '防禦';
+        item.innerHTML = `<strong>${country}</strong><br>${verb}次數: <span class="stat-value">${count}</span>`;
+        listElement.appendChild(item);
+    }
+}
+
+function addLogEntry(type, attacker, defender, attackType, defenseType, success) {
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry ${type}`;
+    
+    if (type === 'attack') {
+        logEntry.innerHTML = `<strong>${attacker}</strong> 對 <strong>${defender}</strong> 發動了 ${attackType}`;
+    } else {
+        logEntry.innerHTML = `<strong>${defender}</strong> 使用 ${defenseType} 進行防禦 ${success ? '<span style="color: #4ecdc4;">成功</span>' : '<span style="color: #ff6b6b;">失敗</span>'}`;
+    }
+    
+    battleLog.prepend(logEntry);
+    battleHistory.push({ type, attacker, defender, attackType, defenseType, success });
+
+    if (battleLog.children.length > 100) {
+        battleLog.removeChild(battleLog.lastChild);
+    }
+}
+
+function addTVNewsEntry(attacker, defender, attackType) {
+    const newsEntry = document.createElement('p');
+    newsEntry.innerHTML = `<strong>${attacker}</strong> 對 <strong>${defender}</strong> 發動 ${attackType}！`;
+    tvNewsScroll.prepend(newsEntry);
+
+    if (tvNewsScroll.children.length > 3) {
+        tvNewsScroll.removeChild(tvNewsScroll.lastChild);
+    }
+
+    // Auto-scroll effect
+    tvNewsScroll.style.transform = 'translateY(-30px)';
+    setTimeout(() => {
+        tvNewsScroll.style.transition = 'transform 0.5s ease-out';
+        tvNewsScroll.style.transform = 'translateY(0)';
+        setTimeout(() => {
+            tvNewsScroll.style.transition = 'none';
+        }, 500);
+    }, 100);
+}
+
+function updateStockMarketPrediction(attacker, defender, attackType) {
+    const industries = ['科技', '金融', '能源', '電信', '醫療'];
+    const affectedIndustry = industries[Math.floor(Math.random() * industries.length)];
+    const volatilityPercentage = (Math.random() * 5 + 1).toFixed(2);
+    const direction = Math.random() > 0.5 ? '上漲' : '下跌';
+    
+    const prediction = `由於${attacker}對${defender}發動的${attackType}，預計${affectedIndustry}產業股票可能${direction}${volatilityPercentage}%`;
+    
+    stockMarketPrediction.innerHTML = prediction;
+}
+
+function updateStats() {
+    attackCountEl.textContent = attackCount;
+    defenseCountEl.textContent = defenseCount;
+    const rate = defenseCount > 0 ? (successfulDefenses / defenseCount * 100).toFixed(2) : 0;
+    successRateEl.textContent = rate + "%";
+}
+
+function updateAIAdvice(attacker, defender, attackType, defenseType, success) {
+    const advices = [
+        `針對${attacker}的${attackType}，建議${defender}加強${success ? defenseType : '其他防禦方法'}。`,
+        `${defender}應該密切關注${attacker}的活動，並提高警惕。`,
+        `建議所有防守方加強資訊共享，共同應對${attacker}的威脅。`,
+        `${success ? '防禦成功！' : '近期高風險！'}建議${defender}進行全面的安全審計。`,
+        `考慮開發新的防禦技術來應對${attackType}。`,
+        `${defender}應該加強與其他國家的合作，共同應對${attacker}的威脅。`,
+        `建議${defender}投資更多資源在${defenseType}的研發上。`,
+        `${attacker}的${attackType}顯示出新的攻擊模式，所有防守方需要提高警惕。`
+    ];
+    aiAdvice.textContent = advices[Math.floor(Math.random() * advices.length)];
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').textContent = isPaused ? '繼續' : '暫停';
+}
+
+function changeSpeed(factor) {
+    simulationSpeed *= factor;
+    simulationSpeed = Math.max(0.25, Math.min(4, simulationSpeed));
+}
+
+function replay() {
+    attackCount = 0;
+    defenseCount = 0;
+    successfulDefenses = 0;
+    updateStats();
+    clearBattleLog();
+    updateCountryList(attackersList, attackers, 'attack');
+    updateCountryList(defendersList, defenders, 'defense');
+    currentReplayIndex = 0;
+}
+
+function clearBattleLog() {
+    battleLog.innerHTML = '';
+}
+
+function updateTimeline() {
+    const timeline = document.getElementById('timeline');
+    timeline.value = (currentReplayIndex / battleHistory.length) * 100;
+}
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('playBtn').addEventListener('click', () => {
+    isPaused = false;
+    document.getElementById('pauseBtn').textContent = '暫停';
+});
+document.getElementById('speedUpBtn').addEventListener('click', () => changeSpeed(1.5));
+document.getElementById('slowDownBtn').addEventListener('click', () => changeSpeed(0.75));
+document.getElementById('replayBtn').addEventListener('click', replay);
+document.getElementById('timeline').addEventListener('input', (e) => {
+    const index = Math.floor((e.target.value / 100) * battleHistory.length);
+    currentReplayIndex = index;
+    replayBattleHistory();
+});
+
+// Add event listeners for zoom buttons
+document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+
+function zoomIn() {
+    currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
+    updateZoom();
+}
+
+function zoomOut() {
+    currentZoom = Math.max(currentZoom - zoomStep, minZoom);
+    updateZoom();
+}
+
+function updateZoom() {
+    projection.scale(150 * currentZoom);
+    redrawMap();
+}
+
+function redrawMap() {
+    svg.selectAll("path").attr("d", path);
+    svg.selectAll(".country-label")
+        .attr("x", d => projection(d.coords)[0])
+        .attr("y", d => projection(d.coords)[1] - 10);
+}
+
+function replayBattleHistory() {
+    clearBattleLog();
+    for (let i = 0; i <= currentReplayIndex; i++) {
+        const battle = battleHistory[i];
+        addLogEntry(battle.type, battle.attacker, battle.defender, battle.attackType, battle.defenseType, battle.success);
+    }
+    updateStats();
+}
+
+function simulateBattle() {
+    if (isPaused) return;
+
+    const attackerCountry = Object.keys(attackers)[Math.floor(Math.random() * Object.keys(attackers).length)];
+    const defenderCountry = Object.keys(defenders)[Math.floor(Math.random() * Object.keys(defenders).length)];
+    const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
+    const defenseType = defenseTypes[Math.floor(Math.random() * defenseTypes.length)];
+    
+    const attackerCoords = projection(attackers[attackerCountry].coords);
+    const defenderCoords = projection(defenders[defenderCountry].coords);
+
+    // 攻擊動畫（像飛彈效果）
+    const missileGroup = svg.append("g");
+    
+    const missile = missileGroup.append("circle")
+        .attr("cx", attackerCoords[0])
+        .attr("cy", attackerCoords[1])
+        .attr("r", 2)
+        .attr("fill", "#ff6b6b")
+        .attr("class", "glow");
+
+    const missileLine = missileGroup.append("line")
+        .attr("x1", attackerCoords[0])
+        .attr("y1", attackerCoords[1])
+        .attr("x2", attackerCoords[0])
+        .attr("y2", attackerCoords[1])
+        .attr("stroke", "#ff9999")
+        .attr("stroke-width", 1)
+        .attr("opacity", 0.5);
+
+    // 添加攻擊國家名稱標籤
+    const attackerLabel = missileGroup.append("text")
+        .attr("class", "country-label")
+        .attr("x", attackerCoords[0])
+        .attr("y", attackerCoords[1] - 10)
+        .text(attackerCountry)
+        .attr("text-anchor", "middle");
+
+    const distance = Math.sqrt(
+        Math.pow(defenderCoords[0] - attackerCoords[0], 2) +
+        Math.pow(defenderCoords[1] - attackerCoords[1], 2)
+    );
+
+    const duration = distance * 10;
+
+    missile.transition()
+        .duration(duration)
+        .attr("cx", defenderCoords[0])
+        .attr("cy", defenderCoords[1])
+        .attr("r", 5);
+
+    missileLine.transition()
+        .duration(duration)
+        .attr("x2", defenderCoords[0])
+        .attr("y2", defenderCoords[1]);
+
+    attackerLabel.transition()
+        .duration(duration)
+        .attr("x", defenderCoords[0])
+        .attr("y", defenderCoords[1] - 10)
+        .on("end", function() {
+            missileGroup.remove();
+        });
+
+    addLogEntry('attack', attackerCountry, defenderCountry, attackType);
+    addTVNewsEntry(attackerCountry, defenderCountry, attackType);
+    updateStockMarketPrediction(attackerCountry, defenderCountry, attackType);
+    attackCount++;
+    attackers[attackerCountry].attacks++;
+
+    // 防禦動畫和結果
+    setTimeout(() => {
+        const success = Math.random() > 0.3;
+        
+        svg.append("circle")
+            .attr("cx", defenderCoords[0])
+            .attr("cy", defenderCoords[1])
+            .attr("r", 5)
+            .attr("fill", success ? "#4ecdc4" : "#ffd700")
+            .attr("class", "glow")
+            .transition()
+            .duration(1000)
+            .attr("r", 20)
+            .style("opacity", 0)
+            .remove();
+
+        addLogEntry('defense', attackerCountry, defenderCountry, attackType, defenseType, success);
+        defenseCount++;
+        defenders[defenderCountry].defenses++;
+        if (success) successfulDefenses++;
+
+        updateStats();
+        updateCountryList(attackersList, attackers, 'attack');
+        updateCountryList(defendersList, defenders, 'defense');
+        updateAIAdvice(attackerCountry, defenderCountry, attackType, defenseType, success);
+        updateTimeline();
+    }, duration);
+}
+
+// 初始化國家標籤
+for (const [country, data] of Object.entries({...attackers, ...defenders})) {
+    const coords = projection(data.coords);
+    svg.append("text")
+        .attr("class", "country-label")
+        .attr("x", coords[0])
+        .attr("y", coords[1] - 10)
+        .text(country)
+        .attr("text-anchor", "middle");
+}
+
+updateCountryList(attackersList, attackers, 'attack');
+updateCountryList(defendersList, defenders, 'defense');
+setInterval(() => {
+    if (!isPaused) {
+        simulateBattle();
+    }
+}, 5000 / simulationSpeed);
+</script>
+</body>
+</html>
